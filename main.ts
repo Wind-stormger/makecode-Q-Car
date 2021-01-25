@@ -4,10 +4,10 @@ let B_was_pressed_times = 0
 let B_was_pressed = 0
 let A_was_pressed_times = 0
 let A_was_pressed = 0
-let start_time_2 = 0
+let Last_end_time_2 = 0
 let Distance = 0
 let Ultrasonic_time = 0
-let start_time = 0
+let Last_end_time_1 = 0
 let Left_IR = 0
 let Right_IR = 0
 let Temperature = 0
@@ -27,16 +27,16 @@ basic.forever(function () {
         while (true) {
             Right_IR = pins.analogReadPin(AnalogPin.P1)
             Left_IR = pins.analogReadPin(AnalogPin.P2)
-            if (input.runningTime() - start_time >= 100) {
+            if (input.runningTime() - Last_end_time_1 >= 100) {
                 pins.digitalWritePin(DigitalPin.P12, 0)
                 pins.digitalWritePin(DigitalPin.P12, 1)
                 control.waitMicros(10)
                 pins.digitalWritePin(DigitalPin.P12, 0)
                 Ultrasonic_time = pins.pulseIn(DigitalPin.P13, PulseValue.High)
                 Distance = Ultrasonic_time / 1000000 * (100 * (330.45 + 0.61 * Temperature)) / 2
-                start_time = input.runningTime()
+                Last_end_time_1 = input.runningTime()
             }
-            if (input.runningTime() - start_time_2 < 1000) {
+            if (input.runningTime() - Last_end_time_2 < 1000) {
                 if (pins.digitalReadPin(DigitalPin.P5) == 1 && A_was_pressed == 0) {
                     A_was_pressed = 1
                 }
@@ -51,12 +51,12 @@ basic.forever(function () {
                     B_was_pressed_times = B_was_pressed_times + 1
                     B_was_pressed = 0
                 }
-            } else if (input.runningTime() - start_time_2 >= 1000) {
+            } else if (input.runningTime() - Last_end_time_2 >= 1000) {
                 Right_wheel_speed = A_was_pressed_times / 12 * 60
                 A_was_pressed_times = 0
                 Left_wheel_speed = B_was_pressed_times / 12 * 60
                 B_was_pressed_times = 0
-                start_time_2 = input.runningTime()
+                Last_end_time_2 = input.runningTime()
                 serial.writeLine("Right wheel speed=" + ("" + Right_wheel_speed) + "|Left wheel speed=" + ("" + Left_wheel_speed))
                 serial.writeLine("Distance=" + ("" + Distance))
                 serial.writeLine("Right_IR_A=" + ("" + Right_IR) + "|Left_IR_A=" + ("" + Left_IR))

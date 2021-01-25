@@ -4,10 +4,10 @@ B_was_pressed_times = 0
 B_was_pressed = 0
 A_was_pressed_times = 0
 A_was_pressed = 0
-start_time_2 = 0
+Last_end_time_2 = 0
 Distance = 0
 Ultrasonic_time = 0
-start_time = 0
+Last_end_time_1 = 0
 Left_IR = 0
 Right_IR = 0
 Temperature = 0
@@ -20,24 +20,24 @@ basic.show_icon(IconNames.SQUARE)
 basic.clear_screen()
 
 def on_forever():
-    global Temperature, Right_IR, Left_IR, Ultrasonic_time, Distance, start_time, A_was_pressed, A_was_pressed_times, B_was_pressed, B_was_pressed_times, Right_wheel_speed, Left_wheel_speed, start_time_2
+    global Temperature, Right_IR, Left_IR, Ultrasonic_time, Distance, Last_end_time_1, A_was_pressed, A_was_pressed_times, B_was_pressed, B_was_pressed_times, Right_wheel_speed, Left_wheel_speed, Last_end_time_2
     Temperature = input.temperature()
-    serial.write_line("sound LV=" + str(input.sound_level()))
-    serial.write_line("temperature=" + str(input.temperature()))
+    serial.write_line("sound LV=" + ("" + str(input.sound_level())))
+    serial.write_line("temperature=" + ("" + str(input.temperature())))
     basic.show_icon(IconNames.SWORD)
     if input.logo_is_pressed():
         while True:
             Right_IR = pins.analog_read_pin(AnalogPin.P1)
             Left_IR = pins.analog_read_pin(AnalogPin.P2)
-            if input.running_time() - start_time >= 100:
+            if input.running_time() - Last_end_time_1 >= 100:
                 pins.digital_write_pin(DigitalPin.P12, 0)
                 pins.digital_write_pin(DigitalPin.P12, 1)
-                control.wait_micros(2)
+                control.wait_micros(10)
                 pins.digital_write_pin(DigitalPin.P12, 0)
                 Ultrasonic_time = pins.pulse_in(DigitalPin.P13, PulseValue.HIGH)
                 Distance = Ultrasonic_time / 1000000 * (100 * (330.45 + 0.61 * Temperature)) / 2
-                start_time = input.running_time()
-            if input.running_time() - start_time_2 < 1000:
+                Last_end_time_1 = input.running_time()
+            if input.running_time() - Last_end_time_2 < 1000:
                 if pins.digital_read_pin(DigitalPin.P5) == 1 and A_was_pressed == 0:
                     A_was_pressed = 1
                 if pins.digital_read_pin(DigitalPin.P5) == 0 and A_was_pressed == 1:
@@ -48,15 +48,15 @@ def on_forever():
                 if pins.digital_read_pin(DigitalPin.P11) == 0 and B_was_pressed == 1:
                     B_was_pressed_times = B_was_pressed_times + 1
                     B_was_pressed = 0
-            elif input.running_time() - start_time_2 >= 1000:
+            elif input.running_time() - Last_end_time_2 >= 1000:
                 Right_wheel_speed = A_was_pressed_times / 12 * 60
                 A_was_pressed_times = 0
                 Left_wheel_speed = B_was_pressed_times / 12 * 60
                 B_was_pressed_times = 0
-                start_time_2 = input.running_time()
-                serial.write_line("Right wheel speed=" + str(Right_wheel_speed) + "|Left wheel speed=" + str(Left_wheel_speed))
-                serial.write_line("Distance=" + str(Distance))
-                serial.write_line("Right_IR_A=" + str(Right_IR) + "|Left_IR_A=" + str(Left_IR))
+                Last_end_time_2 = input.running_time()
+                serial.write_line("Right wheel speed=" + ("" + str(Right_wheel_speed)) + "|Left wheel speed=" + ("" + str(Left_wheel_speed)))
+                serial.write_line("Distance=" + ("" + str(Distance)))
+                serial.write_line("Right_IR_A=" + ("" + str(Right_IR)) + "|Left_IR_A=" + ("" + str(Left_IR)))
             if Right_IR >= 500 and Left_IR >= 500 and Distance > 10:
                 PCA9685.set_pin_pulse_range(PCA9685.PinNum.PIN0, 0, 1024, PCA9685.chip_address("0x40"))
                 PCA9685.set_pin_pulse_range(PCA9685.PinNum.PIN1, 0, 0, PCA9685.chip_address("0x40"))
