@@ -59,10 +59,26 @@ function Ultrasonic_ranging () {
         Last_end_time_1 = input.runningTime()
     }
 }
+// Searching for the dark line
+function IR_calibration () {
+    Line_partol_IR()
+    if (Right_IR <= 700 && Right_IR >= 100 && Right_IR < Right_IR_minimum - 200) {
+        Right_IR_minimum = Right_IR + 200
+    } else if (Left_IR <= 700 && Left_IR >= 100 && Left_IR < Left_IR_minimum - 200) {
+        Left_IR_minimum = Left_IR + 200
+    } else if (Right_IR < 100) {
+        Right_IR_minimum = 300
+    } else if (Left_IR < 100) {
+        Left_IR_minimum = 300
+    }
+    serial.writeLine("Right_IR_minimum=" + ("" + Right_IR_minimum) + "|Left_IR_minimum=" + ("" + Left_IR_minimum))
+    serial.writeLine("Right_IR_A=" + ("" + Right_IR) + "|Left_IR_A=" + ("" + Left_IR))
+    basic.pause(100)
+}
 function Serial_write () {
     if (input.runningTime() - Last_end_time_3 >= 1000) {
         serial.writeLine("Right wheel speed=" + ("" + Right_wheel_speed) + "|Left wheel speed=" + ("" + Left_wheel_speed))
-        serial.writeLine("Distance=" + ("" + Distance))
+        serial.writeLine("Distance=" + ("" + Distance) + ("|Temperature=" + ("" + Temperature)))
         serial.writeLine("Right_IR_A=" + ("" + Right_IR) + "|Left_IR_A=" + ("" + Left_IR))
         Last_end_time_3 = input.runningTime()
     }
@@ -72,24 +88,22 @@ function Line_partol_IR () {
     Left_IR = pins.analogReadPin(AnalogPin.P2)
 }
 function Line_patrol_control () {
-    if (Right_IR >= 500 && Left_IR >= 500 && Distance > 10) {
+    if (Right_IR >= Right_IR_minimum && Left_IR >= Left_IR_minimum && Distance > 10) {
         Motor_control(1024, 0, 1024, 0)
-    } else if (Right_IR < 500 && Left_IR < 500 && Distance > 10) {
+    } else if (Right_IR < Right_IR_minimum && Left_IR < Left_IR_minimum && Distance > 10) {
         Motor_control(0, 0, 0, 0)
-    } else if (Right_IR >= 500 && Left_IR < 500 && Distance > 10) {
+    } else if (Right_IR >= Right_IR_minimum && Left_IR < Left_IR_minimum && Distance > 10) {
         Motor_control(1024, 0, 0, 0)
-    } else if (Right_IR < 500 && Left_IR >= 500 && Distance > 10) {
+    } else if (Right_IR < Right_IR_minimum && Left_IR >= Left_IR_minimum && Distance > 10) {
         Motor_control(0, 0, 1024, 0)
     } else if (Distance <= 10) {
         Motor_control(0, 0, 0, 0)
-    } else {
-    	
     }
 }
+let IR_corrected = 0
+let Last_end_time_3 = 0
 let Left_IR = 0
 let Right_IR = 0
-let Last_end_time_3 = 0
-let Temperature = 0
 let Distance = 0
 let Ultrasonic_time = 0
 let Last_end_time_1 = 0
@@ -100,19 +114,37 @@ let B_was_pressed = 0
 let A_was_pressed_times = 0
 let A_was_pressed = 0
 let Last_end_time_2 = 0
+let Temperature = 0
+let Left_IR_minimum = 0
+let Right_IR_minimum = 0
 PCA9685.init(PCA9685.chipAddress("0x40"), 50)
 pins.digitalWritePin(DigitalPin.P14, 0)
+Right_IR_minimum = 900
+Left_IR_minimum = 900
+Temperature = input.temperature()
 basic.showIcon(IconNames.SmallDiamond)
 basic.showIcon(IconNames.SmallSquare)
 basic.showIcon(IconNames.Diamond)
 basic.showIcon(IconNames.Square)
 basic.clearScreen()
 basic.forever(function () {
-    Temperature = input.temperature()
-    serial.writeLine("sound LV=" + ("" + input.soundLevel()))
-    serial.writeLine("temperature=" + ("" + input.temperature()))
-    basic.showIcon(IconNames.Sword)
-    if (input.buttonIsPressed(Button.A)) {
+    if (IR_corrected == 0) {
+        basic.showArrow(ArrowNames.East)
+    } else if (IR_corrected == 1) {
+        basic.showArrow(ArrowNames.West)
+    }
+    if (input.buttonIsPressed(Button.B) && !(input.buttonIsPressed(Button.A))) {
+        pins.digitalWritePin(DigitalPin.P14, 1)
+        basic.showIcon(IconNames.Asleep)
+        for (let index = 0; index < 20; index++) {
+            IR_calibration()
+        }
+        basic.showIcon(IconNames.Happy)
+        pins.digitalWritePin(DigitalPin.P14, 0)
+        IR_corrected = 1
+    }
+    if (input.buttonIsPressed(Button.A) && !(input.buttonIsPressed(Button.B))) {
+        basic.showIcon(IconNames.Sword)
         while (true) {
             pins.digitalWritePin(DigitalPin.P14, 1)
             Line_partol_IR()
@@ -121,9 +153,5 @@ basic.forever(function () {
             Velocity_measurement()
             Serial_write()
         }
-    }
-    if (input.soundLevel() >= 40) {
-        basic.showIcon(IconNames.EigthNote)
-        basic.pause(500)
     }
 })
